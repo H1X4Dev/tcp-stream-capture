@@ -6,5 +6,7 @@ pkgs.mkShell {
     pkgs.libpcap
   ];
 
+  hardeningDisable = [ "fortify" ];
+
   LIBCLANG_PATH = "${pkgs.llvmPackages.libclang.lib}/lib";
 }
