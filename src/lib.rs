@@ -1,3 +1,4 @@
+pub mod capture;
 
 // TCP stream capture with reassembly
 
