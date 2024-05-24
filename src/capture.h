@@ -17,6 +17,8 @@ struct MacAddress;
 struct OptionMacAddress;
 struct Ipv4Address;
 struct Ipv6Address;
+// enum class IpAddressVersion;
+struct IpAddress;
 
 rust::Vec<LiveDevice> get_live_devices();
 LiveDevice find_by_name(rust::Str name);

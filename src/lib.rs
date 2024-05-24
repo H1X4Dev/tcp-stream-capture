@@ -1,5 +1,5 @@
 use std::fmt::{Debug, Display};
-use std::net::{Ipv4Addr, Ipv6Addr};
+use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 
 use capture::ffi;
 
@@ -67,6 +67,11 @@ impl LiveDevice {
         } else {
             Some(addr.bytes.into())
         }
+    }
+
+    pub fn ip_addresses(&self) -> Vec<IpAddr>
+    {
+        self.0.ip_addresses().into_iter().map(IpAddr::from).collect()
     }
 }
 

@@ -21,4 +21,10 @@ fn main()
         println!("    by name only:  {:?}", LiveDevice::find_by_name(query));
         println!("    by IP only:    {:?}", LiveDevice::find_by_ip(query));
     }
+
+    let device = &devices[1];
+    println!("\nDevice: {:?}", device);
+    for ip_addr in device.ip_addresses() {
+        println!("    {}", ip_addr);
+    }
 }

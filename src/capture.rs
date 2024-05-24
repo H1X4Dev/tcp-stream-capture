@@ -1,4 +1,9 @@
 use std::fmt::Display;
+use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
+
+use crate::capture::ffi::IpAddressVersion;
+
+use self::ffi::IpAddress;
 
 #[cxx::bridge(namespace = "tcp_stream_capture")]
 pub(crate) mod ffi {
@@ -18,14 +23,25 @@ pub(crate) mod ffi {
     }
 
     #[derive(Debug)]
-    pub struct Ipv4Address {
-        pub bytes: [u8; 4],
+    pub(crate) struct Ipv4Address {
+        pub(crate) bytes: [u8; 4],
     }
 
     #[derive(Debug)]
-    pub struct Ipv6Address {
-        pub bytes: [u8; 16],
+    pub(crate) struct Ipv6Address {
+        pub(crate) bytes: [u8; 16],
     }
+
+    pub(crate) enum IpAddressVersion {
+        V4,
+        V6,
+    }
+
+    pub(crate) struct IpAddress {
+        bytes: [u8; 16],
+        version: IpAddressVersion,
+    }
+
 
     unsafe extern "C++" {
         include!("tcp_stream_capture/src/capture.h");
@@ -44,6 +60,7 @@ pub(crate) mod ffi {
         fn mac_address(self: &LiveDevice) -> OptionMacAddress;
         fn ipv4_address(self: &LiveDevice) -> Ipv4Address;
         fn ipv6_address(self: &LiveDevice) -> Ipv6Address;
+        fn ip_addresses(self: &LiveDevice) -> Vec<IpAddress>;
 
         /*
         type LiveDeviceList;
@@ -83,6 +100,19 @@ impl ffi::OptionMacAddress {
             Some(self.value)
         } else {
             None
+        }
+    }
+}
+
+impl From<IpAddress> for IpAddr {
+    fn from(value: IpAddress) -> Self {
+        match value.version {
+            IpAddressVersion::V4 => {
+                let bytes = <[u8; 4]>::try_from(&value.bytes[0..4]).unwrap();
+                Ipv4Addr::from(bytes).into()
+            }
+            IpAddressVersion::V6 => Ipv6Addr::from(value.bytes).into(),
+            _ => panic!("unexpected IpAddressVersion"),
         }
     }
 }

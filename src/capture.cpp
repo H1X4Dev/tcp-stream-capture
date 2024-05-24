@@ -3,6 +3,8 @@
 #include "pcapplusplus/PcapLiveDeviceList.h"
 #include "pcapplusplus/PcapLiveDevice.h"
 #include "pcapplusplus/MacAddress.h"
+#include <pcap/pcap.h>
+#include <cstring>
 #include <iostream>
 
 namespace tcp_stream_capture {
@@ -43,6 +45,48 @@ Ipv6Address LiveDevice::ipv6_address() const noexcept
     uint8_t const* addr_bytes = addr.toBytes();
     std::copy(addr_bytes, addr_bytes + sizeof(result.bytes), result.bytes.data());
     return result;
+}
+
+rust::Vec<IpAddress> LiveDevice::ip_addresses() const noexcept
+{
+    auto const& addresses = m_device->getAddresses();
+    rust::Vec<IpAddress> out;
+    // std::cerr << "AF_UNIX  = " << AF_UNIX << "\n";
+    // std::cerr << "AF_INET  = " << AF_INET << "\n";
+    // std::cerr << "AF_INET6 = " << AF_INET6 << "\n";
+    // std::cerr << "AF_PACKET = " << AF_PACKET << "\n";
+    for (pcap_addr_t const& p : addresses) {
+        if (!p.addr)
+            continue;
+        IpAddress out_addr;
+        if (p.addr->sa_family == AF_INET) {
+            sockaddr_in s;
+            std::memcpy(&s, p.addr, sizeof(s));
+            out_addr.version = IpAddressVersion::V4;
+            std::memcpy(out_addr.bytes.data(), &s.sin_addr, 4);
+            out.push_back(out_addr);
+        }
+        if (p.addr->sa_family == AF_INET6) {
+            sockaddr_in6 s;
+            std::memcpy(&s, p.addr, sizeof(s));
+            out_addr.version = IpAddressVersion::V6;
+            std::memcpy(out_addr.bytes.data(), &s.sin6_addr, 16);
+            out.push_back(out_addr);
+        }
+        /*
+        std::cerr << "addr: " << p.addr << "\n";
+        std::cerr << "netm: " << p.netmask << "\n";
+        std::cerr << "brod: " << p.broadaddr << "\n";
+        std::cerr << "dsta: " << p.dstaddr << "\n";
+        if (p.addr) {
+            std::cerr << "addr family: " << p.addr->sa_family << "\n";
+        }
+        if (p.broadaddr) {
+            std::cerr << "broadaddr family: " << p.broadaddr->sa_family << "\n";
+        }
+        */
+    }
+    return out;
 }
 
 LiveDevice find_by_name(rust::Str name)
