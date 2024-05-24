@@ -59,6 +59,7 @@ rust::Vec<LiveDevice> get_live_devices()
     return out;
 }
 
+/*
 LiveDeviceList::LiveDeviceList()
 {
     m_devices = pcpp::PcapLiveDeviceList::getInstance().getPcapLiveDevicesList();
@@ -78,5 +79,6 @@ LiveDevice LiveDeviceList::get(std::size_t i) const
 {
     return { m_devices[i] };
 }
+*/
 
 }  // namespace

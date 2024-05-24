@@ -21,6 +21,7 @@ LiveDevice find_by_name(rust::Str name);
 LiveDevice find_by_ip(rust::Str ip);
 LiveDevice find_by_ip_or_name(rust::Str ip_or_name);
 
+/*
 class LiveDeviceList {
     std::vector<pcpp::PcapLiveDevice*> m_devices;
 public:
@@ -31,6 +32,7 @@ public:
 };
 
 std::unique_ptr<LiveDeviceList> new_live_device_list();
+*/
 
 
 }  // namespace

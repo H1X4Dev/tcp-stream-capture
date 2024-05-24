@@ -33,11 +33,13 @@ pub(crate) mod ffi {
         fn name(self: &LiveDevice) -> Result<String>;
         fn mac_address(self: &LiveDevice) -> OptionMacAddress;
 
+        /*
         type LiveDeviceList;
         fn new_live_device_list() -> UniquePtr<LiveDeviceList>;
         #[cxx_name = "size"]
         fn len(self: &LiveDeviceList) -> usize;
         fn get(self: &LiveDeviceList, i: usize) -> LiveDevice;
+        */
     }
 }
 
