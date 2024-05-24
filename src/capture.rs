@@ -17,6 +17,16 @@ pub(crate) mod ffi {
         valid: bool,
     }
 
+    #[derive(Debug)]
+    pub struct Ipv4Address {
+        pub bytes: [u8; 4],
+    }
+
+    #[derive(Debug)]
+    pub struct Ipv6Address {
+        pub bytes: [u8; 16],
+    }
+
     unsafe extern "C++" {
         include!("tcp_stream_capture/src/capture.h");
 
@@ -32,6 +42,8 @@ pub(crate) mod ffi {
 
         fn name(self: &LiveDevice) -> Result<String>;
         fn mac_address(self: &LiveDevice) -> OptionMacAddress;
+        fn ipv4_address(self: &LiveDevice) -> Ipv4Address;
+        fn ipv6_address(self: &LiveDevice) -> Ipv6Address;
 
         /*
         type LiveDeviceList;

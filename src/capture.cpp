@@ -27,6 +27,24 @@ OptionMacAddress LiveDevice::mac_address() const noexcept
     }
 }
 
+Ipv4Address LiveDevice::ipv4_address() const noexcept
+{
+    Ipv4Address result;
+    pcpp::IPv4Address addr = m_device->getIPv4Address();
+    uint8_t const* addr_bytes = addr.toBytes();
+    std::copy(addr_bytes, addr_bytes + sizeof(result.bytes), result.bytes.data());
+    return result;
+}
+
+Ipv6Address LiveDevice::ipv6_address() const noexcept
+{
+    Ipv6Address result;
+    pcpp::IPv6Address addr = m_device->getIPv6Address();
+    uint8_t const* addr_bytes = addr.toBytes();
+    std::copy(addr_bytes, addr_bytes + sizeof(result.bytes), result.bytes.data());
+    return result;
+}
+
 LiveDevice find_by_name(rust::Str name)
 {
     std::string str(name);

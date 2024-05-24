@@ -12,9 +12,11 @@ namespace pcpp {
 
 namespace tcp_stream_capture {
 
+struct LiveDevice;
 struct MacAddress;
 struct OptionMacAddress;
-struct LiveDevice;
+struct Ipv4Address;
+struct Ipv6Address;
 
 rust::Vec<LiveDevice> get_live_devices();
 LiveDevice find_by_name(rust::Str name);

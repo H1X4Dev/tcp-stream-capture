@@ -1,4 +1,5 @@
 use std::fmt::{Debug, Display};
+use std::net::{Ipv4Addr, Ipv6Addr};
 
 use capture::ffi;
 
@@ -47,6 +48,26 @@ impl LiveDevice {
     {
         self.0.mac_address().as_option()
     }
+
+    pub fn ipv4_address(&self) -> Option<Ipv4Addr>
+    {
+        let addr = self.0.ipv4_address();
+        if addr.bytes == [0, 0, 0, 0] {
+            None
+        } else {
+            Some(addr.bytes.into())
+        }
+    }
+
+    pub fn ipv6_address(&self) -> Option<Ipv6Addr>
+    {
+        let addr = self.0.ipv6_address();
+        if addr.bytes.iter().all(|&x| x == 0) {
+            None
+        } else {
+            Some(addr.bytes.into())
+        }
+    }
 }
 
 pub fn get_live_devices() -> Vec<LiveDevice>
@@ -66,6 +87,8 @@ impl Debug for LiveDevice {
         f.debug_struct("LiveDevice")
             .field("name", &self.name())
             .field("mac_address", &self.mac_address().map(|x| SwapDebugAndDisplay(x)))
+            .field("ipv4_address", &self.ipv4_address())
+            .field("ipv6_address", &self.ipv6_address())
             .finish()
     }
 }
