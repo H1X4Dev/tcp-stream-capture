@@ -24,6 +24,12 @@ pub(crate) mod ffi {
         type PcapLiveDevice;
 
         fn get_live_devices() -> Vec<LiveDevice>;
+
+        /// Returns NULL if no such device exists.
+        fn find_by_name(name: &str) -> LiveDevice;
+        fn find_by_ip(ip: &str) -> LiveDevice;
+        fn find_by_ip_or_name(ip_or_name: &str) -> LiveDevice;
+
         fn name(self: &LiveDevice) -> Result<String>;
         fn mac_address(self: &LiveDevice) -> OptionMacAddress;
 
@@ -35,8 +41,16 @@ pub(crate) mod ffi {
     }
 }
 
+impl ffi::LiveDevice {
+    pub(crate) fn is_null(&self) -> bool
+    {
+        self.m_device.is_null()
+    }
+}
+
 impl Display for ffi::MacAddress {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result
+    {
         write!(f, "{:02X}:{:02X}:{:02X}:{:02X}:{:02X}:{:02X}",
             self.bytes[0],
             self.bytes[1],

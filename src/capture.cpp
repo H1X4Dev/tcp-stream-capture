@@ -27,6 +27,27 @@ OptionMacAddress LiveDevice::mac_address() const noexcept
     }
 }
 
+LiveDevice find_by_name(rust::Str name)
+{
+    std::string str(name);
+    pcpp::PcapLiveDevice* device = pcpp::PcapLiveDeviceList::getInstance().getPcapLiveDeviceByName(str);
+    return { device };
+}
+
+LiveDevice find_by_ip(rust::Str ip)
+{
+    std::string str(ip);
+    pcpp::PcapLiveDevice* device = pcpp::PcapLiveDeviceList::getInstance().getPcapLiveDeviceByIp(str);
+    return { device };
+}
+
+LiveDevice find_by_ip_or_name(rust::Str ip_or_name)
+{
+    std::string str(ip_or_name);
+    pcpp::PcapLiveDevice* device = pcpp::PcapLiveDeviceList::getInstance().getPcapLiveDeviceByIpOrName(str);
+    return { device };
+}
+
 rust::Vec<LiveDevice> get_live_devices()
 {
     std::vector<pcpp::PcapLiveDevice*> const& devices = pcpp::PcapLiveDeviceList::getInstance().getPcapLiveDevicesList();

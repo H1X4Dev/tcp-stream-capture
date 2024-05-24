@@ -17,6 +17,9 @@ struct OptionMacAddress;
 struct LiveDevice;
 
 rust::Vec<LiveDevice> get_live_devices();
+LiveDevice find_by_name(rust::Str name);
+LiveDevice find_by_ip(rust::Str ip);
+LiveDevice find_by_ip_or_name(rust::Str ip_or_name);
 
 class LiveDeviceList {
     std::vector<pcpp::PcapLiveDevice*> m_devices;
