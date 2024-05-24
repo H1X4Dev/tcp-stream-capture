@@ -1,24 +1,31 @@
-use std::ffi::c_void;
-
-use cxx::{type_id, ExternType};
-
-#[repr(C)]
-struct LiveDevice {
-    _inner: *mut c_void,
-}
-
-unsafe impl ExternType for LiveDevice {
-    type Id = type_id!("tcp_stream_capture::LiveDevice");
-    type Kind = cxx::kind::Trivial;
-}
+use std::fmt::Display;
 
 #[cxx::bridge(namespace = "tcp_stream_capture")]
-mod ffi {
+pub(crate) mod ffi {
+    pub(crate) struct LiveDevice {
+        m_device: *mut PcapLiveDevice,
+    }
+
+    #[derive(Debug)]
+    pub struct MacAddress {
+        pub bytes: [u8; 6],
+    }
+
+    #[derive(Debug)]
+    pub(crate) struct OptionMacAddress {
+        value: MacAddress,
+        valid: bool,
+    }
+
     unsafe extern "C++" {
         include!("tcp_stream_capture/src/capture.h");
 
-        type LiveDevice = crate::capture::LiveDevice;
+        #[namespace = "pcpp"]
+        type PcapLiveDevice;
+
+        fn get_live_devices() -> Vec<LiveDevice>;
         fn name(self: &LiveDevice) -> Result<String>;
+        fn mac_address(self: &LiveDevice) -> OptionMacAddress;
 
         type LiveDeviceList;
         fn new_live_device_list() -> UniquePtr<LiveDeviceList>;
@@ -28,16 +35,26 @@ mod ffi {
     }
 }
 
+impl Display for ffi::MacAddress {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:02X}:{:02X}:{:02X}:{:02X}:{:02X}:{:02X}",
+            self.bytes[0],
+            self.bytes[1],
+            self.bytes[2],
+            self.bytes[3],
+            self.bytes[4],
+            self.bytes[5],
+        )
+    }
+}
 
-pub fn test_device_list()
-{
-    let devices = ffi::new_live_device_list();
-    println!("Found {} devices:", devices.len());
-    for i in 0..devices.len() {
-        let device = devices.get(i);
-        match device.name() {
-            Ok(name) => println!("{}. {}", i, name),
-            Err(e) => eprintln!("Error: {}", e),
+impl ffi::OptionMacAddress {
+    pub(crate) fn as_option(self) -> Option<ffi::MacAddress>
+    {
+        if self.valid {
+            Some(self.value)
+        } else {
+            None
         }
     }
 }
