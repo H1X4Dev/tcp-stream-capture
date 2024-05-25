@@ -22,24 +22,39 @@ pub(crate) mod ffi {
         valid: bool,
     }
 
-    #[derive(Debug)]
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
     pub(crate) struct Ipv4Address {
         pub(crate) bytes: [u8; 4],
     }
 
-    #[derive(Debug)]
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
     pub(crate) struct Ipv6Address {
         pub(crate) bytes: [u8; 16],
     }
 
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
     pub(crate) enum IpAddressVersion {
         V4,
         V6,
     }
 
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
     pub(crate) struct IpAddress {
         bytes: [u8; 16],
         version: IpAddressVersion,
+    }
+
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+    struct TcpConnection {
+        src_addr: IpAddress,
+        dst_addr: IpAddress,
+        src_port: u16,
+        dst_port: u16,
+        flow_key: u32,
+        start_time_s: i64,
+        start_time_us: i64,
+        end_time_s: i64,
+        end_time_us: i64,
     }
 
 

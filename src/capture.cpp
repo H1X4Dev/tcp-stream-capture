@@ -60,6 +60,39 @@ IpAddress mk_ip_address(Ipv6Address addr) noexcept
     return result;
 }
 
+IpAddress mk_ip_address(pcpp::IPv4Address const& addr) noexcept
+{
+    return mk_ip_address(mk_ipv4_address(addr));
+}
+
+IpAddress mk_ip_address(pcpp::IPv6Address const& addr) noexcept
+{
+    return mk_ip_address(mk_ipv6_address(addr));
+}
+
+IpAddress mk_ip_address(pcpp::IPAddress const& addr) noexcept
+{
+    if (addr.isIPv4())
+        return mk_ip_address(addr.getIPv4());
+    assert(addr.isIPv6());
+    return mk_ip_address(addr.getIPv6());
+}
+
+TcpConnection mk_tcp_connection(pcpp::ConnectionData const& conn)
+{
+    TcpConnection result;
+    result.src_addr = mk_ip_address(conn.srcIP);
+    result.dst_addr = mk_ip_address(conn.dstIP);
+    result.src_port = conn.srcPort;
+    result.dst_port = conn.dstPort;
+    result.flow_key = conn.flowKey;
+    result.start_time_s  = conn.startTime.tv_sec;
+    result.start_time_us = conn.startTime.tv_usec;
+    result.end_time_s  = conn.endTime.tv_sec;
+    result.end_time_us = conn.endTime.tv_usec;
+    return result;
+}
+
 rust::String LiveDevice::name() const
 {
     return rust::String(m_device->getName());
