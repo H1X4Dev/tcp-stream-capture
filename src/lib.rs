@@ -51,21 +51,21 @@ impl LiveDevice {
 
     pub fn ipv4_address(&self) -> Option<Ipv4Addr>
     {
-        let addr = self.0.ipv4_address();
-        if addr.bytes == [0, 0, 0, 0] {
+        let addr: Ipv4Addr = self.0.ipv4_address().into();
+        if addr.is_unspecified() {
             None
         } else {
-            Some(addr.bytes.into())
+            Some(addr)
         }
     }
 
     pub fn ipv6_address(&self) -> Option<Ipv6Addr>
     {
-        let addr = self.0.ipv6_address();
-        if addr.bytes.iter().all(|&x| x == 0) {
+        let addr: Ipv6Addr = self.0.ipv6_address().into();
+        if addr.is_unspecified() {
             None
         } else {
-            Some(addr.bytes.into())
+            Some(addr)
         }
     }
 

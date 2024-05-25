@@ -1,10 +1,6 @@
 use std::fmt::Display;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 
-use crate::capture::ffi::IpAddressVersion;
-
-use self::ffi::IpAddress;
-
 #[cxx::bridge(namespace = "tcp_stream_capture")]
 pub(crate) mod ffi {
     pub(crate) struct LiveDevice {
@@ -119,14 +115,26 @@ impl ffi::OptionMacAddress {
     }
 }
 
-impl From<IpAddress> for IpAddr {
-    fn from(value: IpAddress) -> Self {
+impl From<ffi::Ipv4Address> for Ipv4Addr {
+    fn from(value: ffi::Ipv4Address) -> Self {
+        Ipv4Addr::from(value.bytes).into()
+    }
+}
+
+impl From<ffi::Ipv6Address> for Ipv6Addr {
+    fn from(value: ffi::Ipv6Address) -> Self {
+        Ipv6Addr::from(value.bytes).into()
+    }
+}
+
+impl From<ffi::IpAddress> for IpAddr {
+    fn from(value: ffi::IpAddress) -> Self {
         match value.version {
-            IpAddressVersion::V4 => {
+            ffi::IpAddressVersion::V4 => {
                 let bytes = <[u8; 4]>::try_from(&value.bytes[0..4]).unwrap();
                 Ipv4Addr::from(bytes).into()
             }
-            IpAddressVersion::V6 => Ipv6Addr::from(value.bytes).into(),
+            ffi::IpAddressVersion::V6 => Ipv6Addr::from(value.bytes).into(),
             _ => panic!("unexpected IpAddressVersion"),
         }
     }
