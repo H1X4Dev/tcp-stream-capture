@@ -10,6 +10,56 @@
 namespace tcp_stream_capture {
 
 
+Ipv4Address mk_ipv4_address(uint8_t const* addr_bytes) noexcept
+{
+    Ipv4Address result;
+    std::copy(addr_bytes, addr_bytes + sizeof(result.bytes), result.bytes.data());
+    return result;
+}
+
+Ipv4Address mk_ipv4_address(sockaddr_in const& addr) noexcept
+{
+    return mk_ipv4_address(reinterpret_cast<uint8_t const*>(&addr.sin_addr));
+}
+
+Ipv4Address mk_ipv4_address(pcpp::IPv4Address addr) noexcept
+{
+    return mk_ipv4_address(addr.toBytes());
+}
+
+Ipv6Address mk_ipv6_address(uint8_t const* addr_bytes) noexcept
+{
+    Ipv6Address result;
+    std::copy(addr_bytes, addr_bytes + sizeof(result.bytes), result.bytes.data());
+    return result;
+}
+
+Ipv6Address mk_ipv6_address(sockaddr_in6 const& addr) noexcept
+{
+    return mk_ipv6_address(reinterpret_cast<uint8_t const*>(&addr.sin6_addr));
+}
+
+Ipv6Address mk_ipv6_address(pcpp::IPv6Address addr) noexcept
+{
+    return mk_ipv6_address(addr.toBytes());
+}
+
+IpAddress mk_ip_address(Ipv4Address addr) noexcept
+{
+    IpAddress result;
+    result.version = IpAddressVersion::V4;
+    std::copy(addr.bytes.begin(), addr.bytes.end(), result.bytes.begin());
+    return result;
+}
+
+IpAddress mk_ip_address(Ipv6Address addr) noexcept
+{
+    IpAddress result;
+    result.version = IpAddressVersion::V6;
+    std::copy(addr.bytes.begin(), addr.bytes.end(), result.bytes.begin());
+    return result;
+}
+
 rust::String LiveDevice::name() const
 {
     return rust::String(m_device->getName());
@@ -31,20 +81,12 @@ OptionMacAddress LiveDevice::mac_address() const noexcept
 
 Ipv4Address LiveDevice::ipv4_address() const noexcept
 {
-    Ipv4Address result;
-    pcpp::IPv4Address addr = m_device->getIPv4Address();
-    uint8_t const* addr_bytes = addr.toBytes();
-    std::copy(addr_bytes, addr_bytes + sizeof(result.bytes), result.bytes.data());
-    return result;
+    return mk_ipv4_address(m_device->getIPv4Address());
 }
 
 Ipv6Address LiveDevice::ipv6_address() const noexcept
 {
-    Ipv6Address result;
-    pcpp::IPv6Address addr = m_device->getIPv6Address();
-    uint8_t const* addr_bytes = addr.toBytes();
-    std::copy(addr_bytes, addr_bytes + sizeof(result.bytes), result.bytes.data());
-    return result;
+    return mk_ipv6_address(m_device->getIPv6Address());
 }
 
 rust::Vec<IpAddress> LiveDevice::ip_addresses() const noexcept
@@ -58,20 +100,15 @@ rust::Vec<IpAddress> LiveDevice::ip_addresses() const noexcept
     for (pcap_addr_t const& p : addresses) {
         if (!p.addr)
             continue;
-        IpAddress out_addr;
         if (p.addr->sa_family == AF_INET) {
             sockaddr_in s;
             std::memcpy(&s, p.addr, sizeof(s));
-            out_addr.version = IpAddressVersion::V4;
-            std::memcpy(out_addr.bytes.data(), &s.sin_addr, 4);
-            out.push_back(out_addr);
+            out.push_back(mk_ip_address(mk_ipv4_address(s)));
         }
         if (p.addr->sa_family == AF_INET6) {
             sockaddr_in6 s;
             std::memcpy(&s, p.addr, sizeof(s));
-            out_addr.version = IpAddressVersion::V6;
-            std::memcpy(out_addr.bytes.data(), &s.sin6_addr, 16);
-            out.push_back(out_addr);
+            out.push_back(mk_ip_address(mk_ipv6_address(s)));
         }
         /*
         std::cerr << "addr: " << p.addr << "\n";
