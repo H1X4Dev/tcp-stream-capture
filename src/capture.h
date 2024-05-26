@@ -4,24 +4,27 @@
 #include <memory>
 #include "rust/cxx.h"
 
-
 namespace pcpp {
     class PcapLiveDevice;
     class ConnectionData;
 }
 
+namespace tcp_stream_capture {
+    struct LiveDevice;
+    struct MacAddress;
+    struct OptionMacAddress;
+    struct Ipv4Address;
+    struct Ipv6Address;
+    struct IpAddress;
+    struct Timeval;
+    struct Context;
+    class TcpStreamCapture;
+}
+
+#include "tcp_stream_capture/src/capture.rs.h"
 
 namespace tcp_stream_capture {
 
-struct LiveDevice;
-struct MacAddress;
-struct OptionMacAddress;
-struct Ipv4Address;
-struct Ipv6Address;
-struct IpAddress;
-struct Timeval;
-struct Context;
-struct TcpStreamCapture;
 
 rust::Vec<LiveDevice> get_live_devices();
 LiveDevice find_by_name(rust::Str name);
@@ -44,7 +47,7 @@ public:
     TcpStreamCapture(std::unique_ptr<Impl> impl);
     ~TcpStreamCapture();
 
-    bool set_filter(rust::Str filter);
+    CaptureResult set_filter(rust::Str filter);
     bool clear_filter();
 
     bool start_capturing();

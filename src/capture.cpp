@@ -332,7 +332,7 @@ public:
     Impl(rust::Box<Context> ctx, pcpp::IPcapDevice* device, std::unique_ptr<pcpp::IPcapDevice> device_storage);
     ~Impl();
 
-    bool set_filter(rust::Str filter);
+    CaptureResult set_filter(rust::Str filter);
     bool clear_filter();
 
     bool start_capturing();
@@ -356,24 +356,24 @@ TcpStreamCapture::Impl::~Impl()
         stop_capturing();
 }
 
-bool TcpStreamCapture::Impl::set_filter(rust::Str filter)
+CaptureResult TcpStreamCapture::Impl::set_filter(rust::Str filter)
 {
     LOG_TRACE("TcpStreamCapture::set_filter: " << filter);
     std::string filter_str{filter};
     auto bpf_filter = std::make_unique<pcpp::BPFStringFilter>(std::move(filter_str));
     if (!bpf_filter->verifyFilter()) {
         LOG_ERROR("TcpStreamCapture::set_filter: invalid filter");
-        return false;
+        return CaptureResult::InvalidFilter;
     }
     // If the device is opened, try to update the filter immediately.
     // Otherwise the filter will be set in 'start_capturing'.
     if (m_device->isOpened() && !m_device->setFilter(*bpf_filter)) {
         LOG_ERROR("TcpStreamCapture::set_filter: unable to set device filter");
-        return false;
+        return CaptureResult::FilterUpdateFailed;
     }
     // Only update m_filter on success
     m_filter = std::move(bpf_filter);
-    return true;
+    return CaptureResult::Ok;
 }
 
 bool TcpStreamCapture::Impl::clear_filter()
@@ -523,7 +523,7 @@ TcpStreamCapture::~TcpStreamCapture()
 {
 }
 
-bool TcpStreamCapture::set_filter(rust::Str filter)
+CaptureResult TcpStreamCapture::set_filter(rust::Str filter)
 {
     return m_impl->set_filter(std::move(filter));
 }

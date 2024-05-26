@@ -115,10 +115,34 @@ impl Debug for LiveDevice {
 #[derive(Debug)]
 pub struct SomeError;
 
+#[derive(Debug, Error)]
+pub enum CaptureError {
+    #[error("given string is not a valid BPF filter")]
+    InvalidFilter,
+    #[error("unable to set or clear device filter")]
+    FilterUpdateFailed,
+    #[error("unable to open device")]
+    DeviceOpenFailed,
+    #[error("unknown error")]
+    Unknown,
+}
+
+impl From<ffi::CaptureResult> for Result<(), CaptureError> {
+    fn from(value: ffi::CaptureResult) -> Self {
+        use ffi::CaptureResult;
+        match value {
+            CaptureResult::Ok => Ok(()),
+            CaptureResult::InvalidFilter => Err(CaptureError::InvalidFilter),
+            CaptureResult::FilterUpdateFailed => Err(CaptureError::FilterUpdateFailed),
+            CaptureResult::DeviceOpenFailed => Err(CaptureError::DeviceOpenFailed),
+            _other => Err(CaptureError::Unknown),
+        }
+    }
+}
+
 pub struct TcpStreamCapture(cxx::UniquePtr<ffi::TcpStreamCapture>);
 
 impl TcpStreamCapture {
-
     pub fn from_live(device: &LiveDevice, ctx: Context) -> Self
     {
         let inner = ffi::capture_from_live(&device.0, Box::new(ctx));
@@ -132,13 +156,9 @@ impl TcpStreamCapture {
         Self(inner)
     }
 
-    pub fn set_filter(&mut self, filter: &str) -> Result<(), SomeError>
+    pub fn set_filter(&mut self, filter: &str) -> Result<(), CaptureError>
     {
-        let result = self.0.pin_mut().set_filter(filter);
-        match result {
-            true => Ok(()),
-            false => Err(SomeError),
-        }
+        self.0.pin_mut().set_filter(filter).into()
     }
 
     pub fn clear_filter(&mut self) -> Result<(), SomeError>

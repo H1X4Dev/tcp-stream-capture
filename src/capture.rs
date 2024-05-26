@@ -50,18 +50,12 @@ pub(crate) mod ffi {
         tv_usec: i64,
     }
 
-    // #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-    // struct TcpConnection {
-    //     src_addr: IpAddress,
-    //     dst_addr: IpAddress,
-    //     src_port: u16,
-    //     dst_port: u16,
-    //     flow_key: u32,
-    //     start_time_s: i64,
-    //     start_time_us: i64,
-    //     end_time_s: i64,
-    //     end_time_us: i64,
-    // }
+    pub(crate) enum CaptureResult {
+        Ok = 0,
+        InvalidFilter,
+        FilterUpdateFailed,
+        DeviceOpenFailed,
+    }
 
     extern "Rust" {
         type Context;
@@ -117,7 +111,7 @@ pub(crate) mod ffi {
         fn capture_from_live(device: &LiveDevice, ctx: Box<Context>) -> UniquePtr<TcpStreamCapture>;
         fn capture_from_file(filename: &[u8], ctx: Box<Context>) -> UniquePtr<TcpStreamCapture>;
 
-        fn set_filter(self: Pin<&mut TcpStreamCapture>, filter: &str) -> bool;
+        fn set_filter(self: Pin<&mut TcpStreamCapture>, filter: &str) -> CaptureResult;
         fn clear_filter(self: Pin<&mut TcpStreamCapture>) -> bool;
 
         fn start_capturing(self: Pin<&mut TcpStreamCapture>) -> bool;
