@@ -11,7 +11,18 @@ description = """
 Compile PcapPlusPlus and make its library and header files available.
 See also https://github.com/seladb/PcapPlusPlus
 """
+
 links = "PcapPlusPlus"
+
+exclude = [
+    "PcapPlusPlus/**/*.bat",
+    "PcapPlusPlus/**/*.dll",
+    "PcapPlusPlus/**/*.exe",
+    "PcapPlusPlus/**/*.linux32",
+    "PcapPlusPlus/Examples",
+    "PcapPlusPlus/Fuzzers",
+    "PcapPlusPlus/Tests",
+]
 
 [dependencies]
 
