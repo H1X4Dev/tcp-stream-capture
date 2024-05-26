@@ -79,7 +79,7 @@ pub(crate) mod ffi {
     }
 
     unsafe extern "C++" {
-        include!("tcp_stream_capture/src/capture.h");
+        include!("tcp-stream-capture/src/capture.h");
 
         #[namespace = "pcpp"]
         type PcapLiveDevice;

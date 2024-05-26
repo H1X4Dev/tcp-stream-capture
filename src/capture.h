@@ -21,7 +21,7 @@ namespace tcp_stream_capture {
     class TcpStreamCapture;
 }
 
-#include "tcp_stream_capture/src/capture.rs.h"
+#include "tcp-stream-capture/src/capture.rs.h"
 
 namespace tcp_stream_capture {
 

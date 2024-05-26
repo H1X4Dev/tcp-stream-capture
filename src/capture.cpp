@@ -1,5 +1,5 @@
-#include "tcp_stream_capture/src/capture.h"
-#include "tcp_stream_capture/src/capture.rs.h"
+#include "tcp-stream-capture/src/capture.h"
+#include "tcp-stream-capture/src/capture.rs.h"
 
 #include "pcapplusplus/Packet.h"
 #include "pcapplusplus/PcapFileDevice.h"
