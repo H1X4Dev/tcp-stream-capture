@@ -54,6 +54,19 @@ pub(crate) mod ffi {
     //     end_time_us: i64,
     // }
 
+    extern "Rust" {
+        fn log_error_enabled() -> bool;
+        fn log_error(message: &CxxString);
+        fn log_warn_enabled() -> bool;
+        fn log_warn(message: &CxxString);
+        fn log_info_enabled() -> bool;
+        fn log_info(message: &CxxString);
+        fn log_debug_enabled() -> bool;
+        fn log_debug(message: &CxxString);
+        fn log_trace_enabled() -> bool;
+        fn log_trace(message: &CxxString);
+    }
+
     unsafe extern "C++" {
         include!("tcp_stream_capture/src/capture.h");
 
@@ -95,6 +108,17 @@ pub(crate) mod ffi {
     }
 }
 
+fn log_error_enabled() -> bool { tracing::enabled!(tracing::Level::ERROR) }
+fn log_warn_enabled()  -> bool { tracing::enabled!(tracing::Level::WARN) }
+fn log_info_enabled()  -> bool { tracing::enabled!(tracing::Level::INFO) }
+fn log_debug_enabled() -> bool { tracing::enabled!(tracing::Level::DEBUG) }
+fn log_trace_enabled() -> bool { tracing::enabled!(tracing::Level::TRACE) }
+
+fn log_error(message: &cxx::CxxString) { tracing::error!("{}", message); }
+fn log_warn (message: &cxx::CxxString) { tracing::warn! ("{}", message); }
+fn log_info (message: &cxx::CxxString) { tracing::info! ("{}", message); }
+fn log_debug(message: &cxx::CxxString) { tracing::debug!("{}", message); }
+fn log_trace(message: &cxx::CxxString) { tracing::trace!("{}", message); }
 
 fn time_from_timeval(tv_sec: i64, tv_usec: i64) -> Option<SystemTime>
 {

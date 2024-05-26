@@ -7,8 +7,77 @@
 #include <sys/time.h>
 #include <cstring>
 #include <iostream>
+#include <sstream>
 
 namespace tcp_stream_capture {
+
+
+
+namespace logging {
+
+
+struct None { };
+
+template <typename List>
+struct LogData {
+    List list;
+};
+
+template <typename Init, typename Value>
+constexpr LogData<std::pair<Init&&, Value&&>> operator<<(LogData<Init>&& init, Value&& value) noexcept
+{
+    return {{ std::forward<Init>(init.list), std::forward<Value>(value) }};
+}
+
+template <typename Init, size_t n>
+constexpr LogData<std::pair<Init&&, char const*>> operator<<(LogData<Init>&& init, char const (&value)[n]) noexcept
+{
+  return {{ std::forward<Init>(init.list), value }};
+}
+
+inline void output(std::ostream&, None)
+{ }
+
+template <typename Init, typename Last>
+void output(std::ostream& os, std::pair<Init, Last>&& data)
+{
+    output(os, std::move(data.first));
+    os << data.second;
+}
+
+using LogFn = void(std::string const&) noexcept;
+using IsLogEnabledFn = bool() noexcept;
+
+template <typename List>
+void log(LogFn* do_log, char const* file, int line, LogData<List>&& data)
+{
+    std::stringstream s;
+    s << file << ":" << line << ": ";
+    output(s, std::move(data.list));
+    do_log(s.str());
+}
+
+
+}  // namespace logging
+
+#define LOG(is_log_enabled, log_fn, x)               \
+do                                                   \
+{                                                    \
+    if (is_log_enabled)                              \
+    {                                                \
+        logging::log(                                \
+            log_fn,                                  \
+            __FILE__,                                \
+            __LINE__,                                \
+            logging::LogData<logging::None>() << x); \
+    }                                                \
+} while (false)
+
+#define LOG_ERROR(x) LOG(log_error_enabled(), log_error, x)
+#define LOG_WARN(x)  LOG(log_warn_enabled(),  log_warn,  x)
+#define LOG_INFO(x)  LOG(log_info_enabled(),  log_info,  x)
+#define LOG_DEBUG(x) LOG(log_debug_enabled(), log_debug, x)
+#define LOG_TRACE(x) LOG(log_trace_enabled(), log_trace, x)
 
 
 Ipv4Address mk_ipv4_address(uint8_t const* addr_bytes) noexcept
