@@ -4,7 +4,7 @@ fn main()
 {
     let mut cpp = cxx_build::bridge("src/capture.rs");
     cpp.file("src/capture.cpp");
-    cpp.std("c++14");
+    cpp.std("c++17");
 
     // Set include path for PcapPlusPlus
     let pcpp_include = env::var_os("DEP_PCAPPLUSPLUS_INCLUDE")
