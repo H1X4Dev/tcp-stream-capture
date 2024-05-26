@@ -298,27 +298,6 @@ rust::Vec<LiveDevice> get_live_devices()
     return out;
 }
 
-/*
-LiveDeviceList::LiveDeviceList()
-{
-    m_devices = pcpp::PcapLiveDeviceList::getInstance().getPcapLiveDevicesList();
-}
-
-std::unique_ptr<LiveDeviceList> new_live_device_list()
-{
-    return std::make_unique<LiveDeviceList>();
-}
-
-std::size_t LiveDeviceList::size() const
-{
-    return m_devices.size();
-}
-
-LiveDevice LiveDeviceList::get(std::size_t i) const
-{
-    return { m_devices[i] };
-}
-*/
 
 
 class TcpStreamCapture::Impl {

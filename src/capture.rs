@@ -101,14 +101,6 @@ pub(crate) mod ffi {
         fn ipv6_address(self: &LiveDevice) -> Ipv6Address;
         fn ip_addresses(self: &LiveDevice) -> Vec<IpAddress>;
 
-        /*
-        type LiveDeviceList;
-        fn new_live_device_list() -> UniquePtr<LiveDeviceList>;
-        #[cxx_name = "size"]
-        fn len(self: &LiveDeviceList) -> usize;
-        fn get(self: &LiveDeviceList, i: usize) -> LiveDevice;
-        */
-
         #[namespace = "pcpp"]
         type ConnectionData;
 
