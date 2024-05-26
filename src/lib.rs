@@ -1,9 +1,11 @@
-use std::fmt::{Debug, Display};
+use std::fmt::Debug;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 
 use capture::ffi;
+use util::SwapDebugAndDisplay;
 
 mod capture;
+mod util;
 
 pub use capture::{
     MacAddress,
@@ -111,19 +113,6 @@ impl Debug for LiveDevice {
 
 
 
-struct SwapDebugAndDisplay<T>(T);
-
-impl<T: Display> Debug for SwapDebugAndDisplay<T> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        Display::fmt(&self.0, f)
-    }
-}
-
-impl<T: Debug> Display for SwapDebugAndDisplay<T> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        Debug::fmt(&self.0, f)
-    }
-}
 
 
 
