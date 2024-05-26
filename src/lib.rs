@@ -12,6 +12,7 @@ pub use capture::{
     TcpConnection,
     TcpStreamSide,
     TcpStreamEvent,
+    OnTcpEvent,
     Context,
 };
 

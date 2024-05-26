@@ -220,13 +220,19 @@ pub enum TcpStreamEvent<'a> {
     ConnectionEnd(TcpConnection<'a>),
 }
 
+pub type OnTcpEvent = fn(event: TcpStreamEvent<'_>, user_cookie: &(dyn Any + Send));
+
 pub struct Context {
-    // on_tcp_event: Box<dyn Fn(TcpStreamEvent<'_>) + Send>,
-    on_tcp_event: fn(event: TcpStreamEvent<'_>, user_cookie: &(dyn Any + Send)),
+    on_tcp_event: OnTcpEvent,
     user_cookie: Box<dyn Any + Send>,
 }
 
 impl Context {
+    pub fn new(on_tcp_event: OnTcpEvent, user_cookie: Box<dyn Any + Send>) -> Self
+    {
+        Self { on_tcp_event, user_cookie }
+    }
+
     fn handle_tcp_event(&self, event: TcpStreamEvent<'_>)
     {
         (self.on_tcp_event)(event, &self.user_cookie);
