@@ -1,5 +1,6 @@
 use std::fmt::Debug;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
+use std::path::Path;
 
 use capture::ffi;
 use util::SwapDebugAndDisplay;
@@ -15,6 +16,7 @@ pub use capture::{
     OnTcpEvent,
     Context,
 };
+
 
 #[repr(transparent)]
 pub struct LiveDevice(ffi::LiveDevice);
@@ -107,16 +109,55 @@ impl Debug for LiveDevice {
 }
 
 
+#[derive(Debug)]
+pub struct SomeError;
 
+pub struct TcpStreamCapture(cxx::UniquePtr<ffi::TcpStreamCapture>);
 
+impl TcpStreamCapture {
 
+    pub fn from_live(device: &LiveDevice, ctx: Context) -> Self
+    {
+        let inner = ffi::capture_from_live(&device.0, Box::new(ctx));
+        Self(inner)
+    }
 
+    pub fn from_file(filename: &Path, ctx: Context) -> Self
+    {
+        let filename = filename.as_os_str().as_encoded_bytes();
+        let inner = ffi::capture_from_file(filename, Box::new(ctx));
+        Self(inner)
+    }
 
+    pub fn set_filter(&mut self, filter: &str) -> Result<(), SomeError>
+    {
+        let result = self.0.pin_mut().set_filter(filter);
+        match result {
+            true => Ok(()),
+            false => Err(SomeError),
+        }
+    }
 
+    pub fn clear_filter(&mut self) -> Result<(), SomeError>
+    {
+        let result = self.0.pin_mut().clear_filter();
+        match result {
+            true => Ok(()),
+            false => Err(SomeError),
+        }
+    }
 
+    pub fn start_capturing(&mut self) -> Result<(), SomeError>
+    {
+        let result = self.0.pin_mut().start_capturing();
+        match result {
+            true => Ok(()),
+            false => Err(SomeError),
+        }
+    }
 
-
-
-
-
-// TODO: TCP stream capture with reassembly
+    pub fn stop_capturing(&mut self)
+    {
+        self.0.pin_mut().stop_capturing();
+    }
+}
