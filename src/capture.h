@@ -18,8 +18,8 @@ struct MacAddress;
 struct OptionMacAddress;
 struct Ipv4Address;
 struct Ipv6Address;
-// enum class IpAddressVersion;
 struct IpAddress;
+struct Timeval;
 
 rust::Vec<LiveDevice> get_live_devices();
 LiveDevice find_by_name(rust::Str name);
@@ -44,7 +44,7 @@ IpAddress get_conn_dst_addr(pcpp::ConnectionData const& conn) noexcept;
 uint16_t get_conn_src_port(pcpp::ConnectionData const& conn) noexcept;
 uint16_t get_conn_dst_port(pcpp::ConnectionData const& conn) noexcept;
 uint32_t get_conn_flow_key(pcpp::ConnectionData const& conn) noexcept;
-std::array<int64_t, 2> get_conn_start_time(pcpp::ConnectionData const& conn) noexcept;
-std::array<int64_t, 2> get_conn_end_time(pcpp::ConnectionData const& conn) noexcept;
+Timeval get_conn_start_time(pcpp::ConnectionData const& conn) noexcept;
+Timeval get_conn_end_time(pcpp::ConnectionData const& conn) noexcept;
 
 }  // namespace

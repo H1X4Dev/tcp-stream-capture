@@ -148,6 +148,14 @@ IpAddress mk_ip_address(pcpp::IPAddress const& addr) noexcept
     return mk_ip_address(addr.getIPv6());
 }
 
+Timeval mk_timeval(struct timeval t) noexcept
+{
+    Timeval result;
+    result.tv_sec = t.tv_sec;
+    result.tv_usec = t.tv_usec;
+    return result;
+}
+
 IpAddress get_conn_src_addr(pcpp::ConnectionData const& conn) noexcept
 {
     return mk_ip_address(conn.srcIP);
@@ -173,14 +181,14 @@ uint32_t get_conn_flow_key(pcpp::ConnectionData const& conn) noexcept
     return conn.flowKey;
 }
 
-std::array<int64_t, 2> get_conn_start_time(pcpp::ConnectionData const& conn) noexcept
+Timeval get_conn_start_time(pcpp::ConnectionData const& conn) noexcept
 {
-    return { conn.startTime.tv_sec, conn.startTime.tv_usec };
+    return mk_timeval(conn.startTime);
 }
 
-std::array<int64_t, 2> get_conn_end_time(pcpp::ConnectionData const& conn) noexcept
+Timeval get_conn_end_time(pcpp::ConnectionData const& conn) noexcept
 {
-    return { conn.endTime.tv_sec, conn.endTime.tv_usec };
+    return mk_timeval(conn.endTime);
 }
 
 rust::String LiveDevice::name() const

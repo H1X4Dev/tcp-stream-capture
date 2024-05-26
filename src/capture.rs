@@ -41,6 +41,12 @@ pub(crate) mod ffi {
         version: IpAddressVersion,
     }
 
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+    pub(crate) struct Timeval {
+        tv_sec: i64,
+        tv_usec: i64,
+    }
+
     // #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
     // struct TcpConnection {
     //     src_addr: IpAddress,
@@ -102,8 +108,8 @@ pub(crate) mod ffi {
         fn get_conn_src_port(conn: &ConnectionData) -> u16;
         fn get_conn_dst_port(conn: &ConnectionData) -> u16;
         fn get_conn_flow_key(conn: &ConnectionData) -> u32;
-        fn get_conn_start_time(conn: &ConnectionData) -> [i64; 2];
-        fn get_conn_end_time(conn: &ConnectionData) -> [i64; 2];
+        fn get_conn_start_time(conn: &ConnectionData) -> Timeval;
+        fn get_conn_end_time(conn: &ConnectionData) -> Timeval;
 
     }
 }
@@ -120,19 +126,19 @@ fn log_info (message: &cxx::CxxString) { tracing::info! ("{}", message); }
 fn log_debug(message: &cxx::CxxString) { tracing::debug!("{}", message); }
 fn log_trace(message: &cxx::CxxString) { tracing::trace!("{}", message); }
 
-fn time_from_timeval(tv_sec: i64, tv_usec: i64) -> Option<SystemTime>
+fn time_from_timeval(tv: ffi::Timeval) -> Option<SystemTime>
 {
-    if tv_sec == 0 && tv_usec == 0 {
+    if tv.tv_sec == 0 && tv.tv_usec == 0 {
         return None;
     }
-    if tv_sec < 0 || tv_usec < 0 {
-        // TODO: log_warn
+    if tv.tv_sec < 0 || tv.tv_usec < 0 {
+        tracing::warn!("got timeval before epoch: tv_sec={}, tv_usec={}", tv.tv_sec, tv.tv_usec);
         return None;
     }
     Some(
         UNIX_EPOCH
-        + Duration::from_secs(tv_sec.try_into().unwrap())
-        + Duration::from_micros(tv_usec.try_into().unwrap())
+        + Duration::from_secs(tv.tv_sec.try_into().unwrap())
+        + Duration::from_micros(tv.tv_usec.try_into().unwrap())
     )
 }
 
@@ -166,14 +172,12 @@ impl<'a> TcpConnection<'a> {
 
     pub fn start_time(&self) -> Option<SystemTime>
     {
-        let [tv_sec, tv_usec] = ffi::get_conn_start_time(&self.0);
-        time_from_timeval(tv_sec, tv_usec)
+        time_from_timeval(ffi::get_conn_start_time(&self.0))
     }
 
     pub fn end_time(&self) -> Option<SystemTime>
     {
-        let [tv_sec, tv_usec] = ffi::get_conn_end_time(&self.0);
-        time_from_timeval(tv_sec, tv_usec)
+        time_from_timeval(ffi::get_conn_end_time(&self.0))
     }
 }
 
