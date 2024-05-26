@@ -4,6 +4,7 @@
 #include "pcapplusplus/PcapLiveDevice.h"
 #include "pcapplusplus/MacAddress.h"
 #include <pcap/pcap.h>
+#include <sys/time.h>
 #include <cstring>
 #include <iostream>
 
@@ -78,19 +79,39 @@ IpAddress mk_ip_address(pcpp::IPAddress const& addr) noexcept
     return mk_ip_address(addr.getIPv6());
 }
 
-TcpConnection mk_tcp_connection(pcpp::ConnectionData const& conn)
+IpAddress get_conn_src_addr(pcpp::ConnectionData const& conn) noexcept
 {
-    TcpConnection result;
-    result.src_addr = mk_ip_address(conn.srcIP);
-    result.dst_addr = mk_ip_address(conn.dstIP);
-    result.src_port = conn.srcPort;
-    result.dst_port = conn.dstPort;
-    result.flow_key = conn.flowKey;
-    result.start_time_s  = conn.startTime.tv_sec;
-    result.start_time_us = conn.startTime.tv_usec;
-    result.end_time_s  = conn.endTime.tv_sec;
-    result.end_time_us = conn.endTime.tv_usec;
-    return result;
+    return mk_ip_address(conn.srcIP);
+}
+
+IpAddress get_conn_dst_addr(pcpp::ConnectionData const& conn) noexcept
+{
+    return mk_ip_address(conn.dstIP);
+}
+
+uint16_t get_conn_src_port(pcpp::ConnectionData const& conn) noexcept
+{
+    return conn.srcPort;
+}
+
+uint16_t get_conn_dst_port(pcpp::ConnectionData const& conn) noexcept
+{
+    return conn.dstPort;
+}
+
+uint32_t get_conn_flow_key(pcpp::ConnectionData const& conn) noexcept
+{
+    return conn.flowKey;
+}
+
+std::array<int64_t, 2> get_conn_start_time(pcpp::ConnectionData const& conn) noexcept
+{
+    return { conn.startTime.tv_sec, conn.startTime.tv_usec };
+}
+
+std::array<int64_t, 2> get_conn_end_time(pcpp::ConnectionData const& conn) noexcept
+{
+    return { conn.endTime.tv_sec, conn.endTime.tv_usec };
 }
 
 rust::String LiveDevice::name() const

@@ -1,12 +1,13 @@
 #pragma once
-#include "rust/cxx.h"
-// #include "capture.rs.h"
-// #include "tcp_stream_capture/src/capture.rs.h"
+
+#include <array>
 #include <memory>
+#include "rust/cxx.h"
 
 
 namespace pcpp {
     class PcapLiveDevice;
+    class ConnectionData;
 }
 
 
@@ -38,5 +39,12 @@ public:
 std::unique_ptr<LiveDeviceList> new_live_device_list();
 */
 
+IpAddress get_conn_src_addr(pcpp::ConnectionData const& conn) noexcept;
+IpAddress get_conn_dst_addr(pcpp::ConnectionData const& conn) noexcept;
+uint16_t get_conn_src_port(pcpp::ConnectionData const& conn) noexcept;
+uint16_t get_conn_dst_port(pcpp::ConnectionData const& conn) noexcept;
+uint32_t get_conn_flow_key(pcpp::ConnectionData const& conn) noexcept;
+std::array<int64_t, 2> get_conn_start_time(pcpp::ConnectionData const& conn) noexcept;
+std::array<int64_t, 2> get_conn_end_time(pcpp::ConnectionData const& conn) noexcept;
 
 }  // namespace

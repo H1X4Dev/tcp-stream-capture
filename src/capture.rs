@@ -1,5 +1,6 @@
 use std::fmt::Display;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 #[cxx::bridge(namespace = "tcp_stream_capture")]
 pub(crate) mod ffi {
@@ -40,19 +41,18 @@ pub(crate) mod ffi {
         version: IpAddressVersion,
     }
 
-    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-    struct TcpConnection {
-        src_addr: IpAddress,
-        dst_addr: IpAddress,
-        src_port: u16,
-        dst_port: u16,
-        flow_key: u32,
-        start_time_s: i64,
-        start_time_us: i64,
-        end_time_s: i64,
-        end_time_us: i64,
-    }
-
+    // #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+    // struct TcpConnection {
+    //     src_addr: IpAddress,
+    //     dst_addr: IpAddress,
+    //     src_port: u16,
+    //     dst_port: u16,
+    //     flow_key: u32,
+    //     start_time_s: i64,
+    //     start_time_us: i64,
+    //     end_time_s: i64,
+    //     end_time_us: i64,
+    // }
 
     unsafe extern "C++" {
         include!("tcp_stream_capture/src/capture.h");
@@ -80,8 +80,79 @@ pub(crate) mod ffi {
         fn len(self: &LiveDeviceList) -> usize;
         fn get(self: &LiveDeviceList, i: usize) -> LiveDevice;
         */
+
+        #[namespace = "pcpp"]
+        type ConnectionData;
+
+        fn get_conn_src_addr(conn: &ConnectionData) -> IpAddress;
+        fn get_conn_dst_addr(conn: &ConnectionData) -> IpAddress;
+        fn get_conn_src_port(conn: &ConnectionData) -> u16;
+        fn get_conn_dst_port(conn: &ConnectionData) -> u16;
+        fn get_conn_flow_key(conn: &ConnectionData) -> u32;
+        fn get_conn_start_time(conn: &ConnectionData) -> [i64; 2];
+        fn get_conn_end_time(conn: &ConnectionData) -> [i64; 2];
+
     }
 }
+
+
+fn time_from_timeval(tv_sec: i64, tv_usec: i64) -> Option<SystemTime>
+{
+    if tv_sec == 0 && tv_usec == 0 {
+        return None;
+    }
+    if tv_sec < 0 || tv_usec < 0 {
+        // TODO: log_warn
+        return None;
+    }
+    Some(
+        UNIX_EPOCH
+        + Duration::from_secs(tv_sec.try_into().unwrap())
+        + Duration::from_micros(tv_usec.try_into().unwrap())
+    )
+}
+
+pub struct TcpConnection<'a>(&'a ffi::ConnectionData);
+
+impl<'a> TcpConnection<'a> {
+    pub fn src_addr(&self) -> IpAddr
+    {
+        ffi::get_conn_src_addr(&self.0).into()
+    }
+
+    pub fn dst_addr(&self) -> IpAddr
+    {
+        ffi::get_conn_dst_addr(&self.0).into()
+    }
+
+    pub fn src_port(&self) -> u16
+    {
+        ffi::get_conn_src_port(&self.0)
+    }
+
+    pub fn dst_port(&self) -> u16
+    {
+        ffi::get_conn_dst_port(&self.0)
+    }
+
+    pub fn flow_key(&self) -> u32
+    {
+        ffi::get_conn_flow_key(&self.0)
+    }
+
+    pub fn start_time(&self) -> Option<SystemTime>
+    {
+        let [tv_sec, tv_usec] = ffi::get_conn_start_time(&self.0);
+        time_from_timeval(tv_sec, tv_usec)
+    }
+
+    pub fn end_time(&self) -> Option<SystemTime>
+    {
+        let [tv_sec, tv_usec] = ffi::get_conn_end_time(&self.0);
+        time_from_timeval(tv_sec, tv_usec)
+    }
+}
+
 
 impl ffi::LiveDevice {
     pub(crate) fn is_null(&self) -> bool

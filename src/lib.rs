@@ -7,6 +7,7 @@ mod capture;
 
 
 pub use self::ffi::MacAddress;
+pub use capture::TcpConnection;
 
 #[repr(transparent)]
 pub struct LiveDevice(ffi::LiveDevice);
