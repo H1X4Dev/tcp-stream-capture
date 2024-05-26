@@ -2,8 +2,10 @@ use std::fmt::Debug;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 use std::path::Path;
 
-use capture::ffi;
-use util::SwapDebugAndDisplay;
+use thiserror::Error;
+
+use crate::capture::ffi;
+use crate::util::SwapDebugAndDisplay;
 
 mod capture;
 mod util;
@@ -21,7 +23,8 @@ pub use capture::{
 #[repr(transparent)]
 pub struct LiveDevice(ffi::LiveDevice);
 
-#[derive(Debug)]
+#[derive(Debug, Error)]
+#[error("bytes do not form a valid UTF-8 string")]
 pub struct Utf8Error;
 
 impl LiveDevice {

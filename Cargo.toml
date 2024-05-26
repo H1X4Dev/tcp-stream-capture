@@ -8,6 +8,7 @@ edition = "2021"
 [dependencies]
 cxx = "1.0.122"
 pcapplusplus-sys = { path = "./pcapplusplus-sys", version = "0.1.0" }
+thiserror = "1.0.61"
 tracing = "0.1.40"
 
 [build-dependencies]
