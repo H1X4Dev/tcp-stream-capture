@@ -2,6 +2,17 @@ use tcp_stream_capture::*;
 
 fn main()
 {
+    let format = tracing_subscriber::fmt::format()
+        .with_thread_ids(true)
+        .pretty();
+    let filter = tracing_subscriber::EnvFilter::try_from_default_env()
+        .or_else(|_| tracing_subscriber::EnvFilter::try_new("info"))
+        .unwrap();
+    tracing_subscriber::fmt()
+        .event_format(format)
+        .with_env_filter(filter)
+        .init();
+
     let devices = get_live_devices();
     println!("Found {} live devices:", devices.len());
     for (i, device) in devices.iter().enumerate() {
