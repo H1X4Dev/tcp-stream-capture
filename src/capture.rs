@@ -120,6 +120,16 @@ pub(crate) mod ffi {
         fn get_conn_start_time(conn: &ConnectionData) -> Timeval;
         fn get_conn_end_time(conn: &ConnectionData) -> Timeval;
 
+        type TcpStreamCapture;
+
+        fn capture_from_live(device: &LiveDevice, ctx: Box<Context>) -> UniquePtr<TcpStreamCapture>;
+        fn capture_from_file(filename: &[u8], ctx: Box<Context>) -> UniquePtr<TcpStreamCapture>;
+
+        fn set_filter(self: Pin<&mut TcpStreamCapture>, filter: &str) -> bool;
+        fn clear_filter(self: Pin<&mut TcpStreamCapture>) -> bool;
+
+        fn start_capturing(self: Pin<&mut TcpStreamCapture>) -> bool;
+        fn stop_capturing(self: Pin<&mut TcpStreamCapture>);
     }
 }
 

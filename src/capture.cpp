@@ -1,13 +1,22 @@
 #include "tcp_stream_capture/src/capture.h"
 #include "tcp_stream_capture/src/capture.rs.h"
-#include "pcapplusplus/PcapLiveDeviceList.h"
+
+#include "pcapplusplus/Packet.h"
+#include "pcapplusplus/PcapFileDevice.h"
+#include "pcapplusplus/PcapFilter.h"
 #include "pcapplusplus/PcapLiveDevice.h"
-#include "pcapplusplus/MacAddress.h"
+#include "pcapplusplus/PcapLiveDeviceList.h"
+#include "pcapplusplus/TcpReassembly.h"
+
 #include <pcap/pcap.h>
 #include <sys/time.h>
+
+#include <atomic>
+#include <cassert>
 #include <cstring>
 #include <iostream>
 #include <sstream>
+#include <thread>
 
 namespace tcp_stream_capture {
 
@@ -310,5 +319,250 @@ LiveDevice LiveDeviceList::get(std::size_t i) const
     return { m_devices[i] };
 }
 */
+
+
+class TcpStreamCapture::Impl {
+    rust::Box<Context> m_ctx;
+
+    pcpp::IPcapDevice* m_device = nullptr;
+    std::unique_ptr<pcpp::IPcapDevice> m_device_storage;  // manages lifetime of m_device, if necessary
+
+    std::unique_ptr<pcpp::GeneralFilter> m_filter;
+
+    // Background thread for file reader devices
+    std::thread m_file_reader_thread;
+    std::atomic_bool m_keep_reading;
+
+    bool m_is_capturing = false;
+
+    pcpp::TcpReassembly m_assembler;
+
+    // Background thread that reads packets from a pcap file.
+    // We use a background thread for consistency with capturing from live devices.
+    static void read_file_device(Impl* self, pcpp::IFileReaderDevice* file_device);
+
+    // Called in a background thread by pcpp::PcapLiveDevice when a new packet arrives.
+    static void device_on_packet_arrives(pcpp::RawPacket* packet, pcpp::PcapLiveDevice* device, void* cookie);
+
+    // Called by pcpp::TcpReassembly.
+    static void assembler_on_tcp_message_ready(int8_t side, pcpp::TcpStreamData const& data, void* cookie);
+    static void assembler_on_tcp_connection_start(pcpp::ConnectionData const& conn, void* cookie);
+    static void assembler_on_tcp_connection_end(pcpp::ConnectionData const& conn, pcpp::TcpReassembly::ConnectionEndReason reason, void* cookie);
+
+public:
+    Impl(rust::Box<Context> ctx, pcpp::IPcapDevice* device, std::unique_ptr<pcpp::IPcapDevice> device_storage);
+    ~Impl();
+
+    bool set_filter(rust::Str filter);
+    bool clear_filter();
+
+    bool start_capturing();
+    void stop_capturing();
+};
+
+TcpStreamCapture::Impl::Impl(rust::Box<Context> ctx, pcpp::IPcapDevice* device, std::unique_ptr<pcpp::IPcapDevice> device_storage)
+    : m_ctx(std::move(ctx))
+    , m_device(device)
+    , m_device_storage(std::move(device_storage))
+    , m_assembler(Impl::assembler_on_tcp_message_ready, this, Impl::assembler_on_tcp_connection_start, Impl::assembler_on_tcp_connection_end)
+{
+    LOG_TRACE("TcpStreamCapture::TcpStreamCapture()");
+    assert(m_device);
+}
+
+TcpStreamCapture::Impl::~Impl()
+{
+    LOG_TRACE("TcpStreamCapture::~TcpStreamCapture()");
+    if (m_is_capturing)
+        stop_capturing();
+}
+
+bool TcpStreamCapture::Impl::set_filter(rust::Str filter)
+{
+    LOG_TRACE("TcpStreamCapture::set_filter: " << filter);
+    std::string filter_str{filter};
+    auto bpf_filter = std::make_unique<pcpp::BPFStringFilter>(std::move(filter_str));
+    if (!bpf_filter->verifyFilter()) {
+        LOG_ERROR("TcpStreamCapture::set_filter: invalid filter");
+        return false;
+    }
+    // If the device is opened, try to update the filter immediately.
+    // Otherwise the filter will be set in 'start_capturing'.
+    if (m_device->isOpened() && !m_device->setFilter(*bpf_filter)) {
+        LOG_ERROR("TcpStreamCapture::set_filter: unable to set device filter");
+        return false;
+    }
+    // Only update m_filter on success
+    m_filter = std::move(bpf_filter);
+    return true;
+}
+
+bool TcpStreamCapture::Impl::clear_filter()
+{
+    LOG_TRACE("TcpStreamCapture::clear_filter");
+    // If the device is opened, try to update the filter immediately.
+    // Otherwise the filter will be set in 'start_capturing'.
+    // If clearing fails, we keep m_filter alive.
+    if (m_device->isOpened() && !m_device->clearFilter()) {
+        LOG_ERROR("TcpStreamCapture::clear_filter: unable to clear device filter");
+        return false;
+    }
+    m_filter = nullptr;
+    return true;
+}
+
+bool TcpStreamCapture::Impl::start_capturing()
+{
+    LOG_TRACE("TcpStreamCapture::start_capturing");
+    if (m_is_capturing)
+        return false;
+    if (!m_device->open()) {
+        LOG_ERROR("TcpStreamCapture::start_capturing: unable to open device");
+        return false;
+    }
+    if (m_filter && !m_device->setFilter(*m_filter)) {
+        LOG_ERROR("TcpStreamCapture::start_capturing: unable to set device filter");
+        m_device->close();
+        return false;
+    }
+    else if (!m_filter && !m_device->clearFilter()) {
+        LOG_ERROR("TcpStreamCapture::start_capturing: unable to clear device filter");
+        m_device->close();
+        return false;
+    }
+    if (auto live_device = dynamic_cast<pcpp::PcapLiveDevice*>(m_device)) {
+        // This starts a background thread where the capturing is done.
+        // The callback will be called in the background thread.
+        m_is_capturing = live_device->startCapture(Impl::device_on_packet_arrives, this);
+    }
+    if (auto file_device = dynamic_cast<pcpp::IFileReaderDevice*>(m_device)) {
+        // Start background thread ourselves and read the file there.
+        // This is simply done for API consistency. We do not mind performance
+        // drawbacks in this case since our primary use case is capturing on a
+        // live device.
+        m_keep_reading.store(true);
+        m_is_capturing = true;
+        m_file_reader_thread = std::thread(Impl::read_file_device, this, file_device);
+    }
+    return m_is_capturing;
+}
+
+void TcpStreamCapture::Impl::stop_capturing()
+{
+    LOG_TRACE("TcpStreamCapture::stop_capturing");
+    if (!m_is_capturing)
+        return;
+    if (auto live_device = dynamic_cast<pcpp::PcapLiveDevice*>(m_device)) {
+        live_device->stopCapture();
+    }
+    if (auto file_device = dynamic_cast<pcpp::IFileReaderDevice*>(m_device)) {
+        (void)file_device;
+        LOG_DEBUG("TcpStreamCapture::stop_capturing: about to join file reader thread");
+        m_keep_reading.store(false);
+        m_file_reader_thread.join();
+        LOG_DEBUG("TcpStreamCapture::stop_capturing: joined file reader thread");
+    }
+    m_device->close();
+    m_is_capturing = false;
+}
+
+void TcpStreamCapture::Impl::read_file_device(Impl* self, pcpp::IFileReaderDevice* file_device)
+{
+    LOG_TRACE("TcpStreamCapture::read_file_device thread: starting");
+    pcpp::RawPacket rawPacket;
+    while (true) {
+        if (!self->m_keep_reading.load()) {
+            LOG_DEBUG("TcpStreamCapture::read_file_device thread: stopping (reason: flag)");
+            break;
+        }
+        if (!file_device->getNextPacket(rawPacket)) {
+            LOG_DEBUG("TcpStreamCapture::read_file_device thread: stopping (reason: no more packets)");
+            break;
+        }
+        LOG_DEBUG("TcpStreamCapture::read_file_device thread: got packet: " << rawPacket.getRawDataLen() << " bytes");
+        self->m_assembler.reassemblePacket(&rawPacket);
+    }
+    LOG_TRACE("TcpStreamCapture::read_file_device thread: stopped");
+}
+
+void TcpStreamCapture::Impl::device_on_packet_arrives(pcpp::RawPacket* packet, pcpp::PcapLiveDevice* device, void* cookie)
+{
+    LOG_TRACE("TcpStreamCapture::device_on_packet_arrives");
+    (void)device;
+    auto* self = reinterpret_cast<TcpStreamCapture::Impl*>(cookie);
+    self->m_assembler.reassemblePacket(packet);
+}
+
+void TcpStreamCapture::Impl::assembler_on_tcp_message_ready(int8_t side, pcpp::TcpStreamData const& data, void* cookie)
+{
+    LOG_TRACE("TcpStreamCapture::assembler_on_tcp_message_ready");
+    auto* self = reinterpret_cast<TcpStreamCapture::Impl*>(cookie);
+    rust::Slice<const uint8_t> payload{data.getData(), data.getDataLength()};
+    on_tcp_message(*self->m_ctx, data.getConnectionData(), side, payload, data.getMissingByteCount(), mk_timeval(data.getTimeStamp()));
+}
+
+void TcpStreamCapture::Impl::assembler_on_tcp_connection_start(pcpp::ConnectionData const& conn, void* cookie)
+{
+    LOG_TRACE("TcpStreamCapture::assembler_on_tcp_connection_start");
+    auto* self = reinterpret_cast<TcpStreamCapture::Impl*>(cookie);
+    on_tcp_connection_start(*self->m_ctx, conn);
+}
+
+void TcpStreamCapture::Impl::assembler_on_tcp_connection_end(pcpp::ConnectionData const& conn, pcpp::TcpReassembly::ConnectionEndReason reason, void* cookie)
+{
+    LOG_TRACE("TcpStreamCapture::assembler_on_tcp_connection_end");
+    (void)reason;
+    auto* self = reinterpret_cast<TcpStreamCapture::Impl*>(cookie);
+    on_tcp_connection_end(*self->m_ctx, conn);
+}
+
+
+
+std::unique_ptr<TcpStreamCapture> capture_from_live(LiveDevice const& device, rust::Box<Context> ctx)
+{
+    auto impl = std::make_unique<TcpStreamCapture::Impl>(std::move(ctx), device.m_device, nullptr);
+    return std::make_unique<TcpStreamCapture>(std::move(impl));
+}
+
+std::unique_ptr<TcpStreamCapture> capture_from_file(rust::Slice<const uint8_t> filename, rust::Box<Context> ctx)
+{
+    std::string filename_str{filename.data(), filename.data() + filename.size()};
+    auto device = std::make_unique<pcpp::PcapFileReaderDevice>(filename_str);
+    auto impl = std::make_unique<TcpStreamCapture::Impl>(std::move(ctx), device.get(), std::move(device));
+    return std::make_unique<TcpStreamCapture>(std::move(impl));
+}
+
+
+
+TcpStreamCapture::TcpStreamCapture(std::unique_ptr<Impl> impl)
+    : m_impl(std::move(impl))
+{
+    assert(m_impl);
+}
+
+TcpStreamCapture::~TcpStreamCapture()
+{
+}
+
+bool TcpStreamCapture::set_filter(rust::Str filter)
+{
+    return m_impl->set_filter(std::move(filter));
+}
+
+bool TcpStreamCapture::clear_filter()
+{
+    return m_impl->clear_filter();
+}
+
+bool TcpStreamCapture::start_capturing()
+{
+    return m_impl->start_capturing();
+}
+
+void TcpStreamCapture::stop_capturing()
+{
+    return m_impl->stop_capturing();
+}
+
 
 }  // namespace

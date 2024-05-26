@@ -20,6 +20,8 @@ struct Ipv4Address;
 struct Ipv6Address;
 struct IpAddress;
 struct Timeval;
+struct Context;
+struct TcpStreamCapture;
 
 rust::Vec<LiveDevice> get_live_devices();
 LiveDevice find_by_name(rust::Str name);
@@ -46,5 +48,26 @@ uint16_t get_conn_dst_port(pcpp::ConnectionData const& conn) noexcept;
 uint32_t get_conn_flow_key(pcpp::ConnectionData const& conn) noexcept;
 Timeval get_conn_start_time(pcpp::ConnectionData const& conn) noexcept;
 Timeval get_conn_end_time(pcpp::ConnectionData const& conn) noexcept;
+
+class TcpStreamCapture {
+    class Impl;
+    std::unique_ptr<Impl> m_impl;
+
+public:
+    TcpStreamCapture(std::unique_ptr<Impl> impl);
+    ~TcpStreamCapture();
+
+    bool set_filter(rust::Str filter);
+    bool clear_filter();
+
+    bool start_capturing();
+    void stop_capturing();
+
+    friend std::unique_ptr<TcpStreamCapture> capture_from_live(LiveDevice const& device, rust::Box<Context> ctx);
+    friend std::unique_ptr<TcpStreamCapture> capture_from_file(rust::Slice<const uint8_t> filename, rust::Box<Context> ctx);
+};
+
+std::unique_ptr<TcpStreamCapture> capture_from_live(LiveDevice const& device, rust::Box<Context> ctx);
+std::unique_ptr<TcpStreamCapture> capture_from_file(rust::Slice<const uint8_t> filename, rust::Box<Context> ctx);
 
 }  // namespace
