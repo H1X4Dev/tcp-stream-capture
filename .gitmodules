@@ -1,3 +1,3 @@
 [submodule "PcapPlusPlus"]
-	path = PcapPlusPlus
+	path = pcapplusplus-sys/PcapPlusPlus
 	url = https://github.com/seladb/PcapPlusPlus.git
