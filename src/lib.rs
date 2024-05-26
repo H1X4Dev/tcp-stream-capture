@@ -5,9 +5,13 @@ use capture::ffi;
 
 mod capture;
 
-
-pub use self::ffi::MacAddress;
-pub use capture::TcpConnection;
+pub use capture::{
+    MacAddress,
+    TcpConnection,
+    TcpStreamSide,
+    TcpStreamEvent,
+    Context,
+};
 
 #[repr(transparent)]
 pub struct LiveDevice(ffi::LiveDevice);

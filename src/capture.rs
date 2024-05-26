@@ -1,6 +1,9 @@
+use std::any::Any;
 use std::fmt::Display;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
+
+pub use ffi::MacAddress;
 
 #[cxx::bridge(namespace = "tcp_stream_capture")]
 pub(crate) mod ffi {
@@ -61,6 +64,12 @@ pub(crate) mod ffi {
     // }
 
     extern "Rust" {
+        type Context;
+
+        fn on_tcp_message(ctx: &Context, conn: &ConnectionData, side: i8, payload: &[u8], missing_bytes: usize, timestamp: Timeval);
+        fn on_tcp_connection_start(ctx: &Context, conn: &ConnectionData);
+        fn on_tcp_connection_end(ctx: &Context, conn: &ConnectionData);
+
         fn log_error_enabled() -> bool;
         fn log_error(message: &CxxString);
         fn log_warn_enabled() -> bool;
@@ -181,6 +190,75 @@ impl<'a> TcpConnection<'a> {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum TcpStreamSide {
+    SideA = 0,
+    SideB = 1,
+}
+
+impl TcpStreamSide {
+    fn from_i8(side: i8) -> Self {
+        if side == 0 {
+            Self::SideA
+        } else {
+            Self::SideB
+        }
+    }
+}
+
+pub enum TcpStreamEvent<'a> {
+    Message {
+        conn: TcpConnection<'a>,
+        side: TcpStreamSide,
+        payload: &'a [u8],
+        /// The number of missing bytes due to packet loss.
+        missing_bytes: usize,
+        /// When this packet was received.
+        timestamp: Option<SystemTime>,
+    },
+    ConnectionStart(TcpConnection<'a>),
+    ConnectionEnd(TcpConnection<'a>),
+}
+
+pub struct Context {
+    // on_tcp_event: Box<dyn Fn(TcpStreamEvent<'_>) + Send>,
+    on_tcp_event: fn(event: TcpStreamEvent<'_>, user_cookie: &(dyn Any + Send)),
+    user_cookie: Box<dyn Any + Send>,
+}
+
+impl Context {
+    fn handle_tcp_event(&self, event: TcpStreamEvent<'_>)
+    {
+        (self.on_tcp_event)(event, &self.user_cookie);
+
+        fn is_send<T: Send>() -> bool { return true; }
+        assert!(is_send::<Context>());
+    }
+}
+
+fn on_tcp_message(ctx: &Context, conn: &ffi::ConnectionData, side: i8, payload: &[u8], missing_bytes: usize, timestamp: ffi::Timeval)
+{
+    let event = TcpStreamEvent::Message {
+        conn: TcpConnection(conn),
+        side: TcpStreamSide::from_i8(side),
+        payload,
+        missing_bytes,
+        timestamp: time_from_timeval(timestamp),
+    };
+    ctx.handle_tcp_event(event);
+}
+
+fn on_tcp_connection_start(ctx: &Context, conn: &ffi::ConnectionData)
+{
+    let event = TcpStreamEvent::ConnectionStart(TcpConnection(conn));
+    ctx.handle_tcp_event(event);
+}
+
+fn on_tcp_connection_end(ctx: &Context, conn: &ffi::ConnectionData)
+{
+    let event = TcpStreamEvent::ConnectionEnd(TcpConnection(conn));
+    ctx.handle_tcp_event(event);
+}
 
 impl ffi::LiveDevice {
     pub(crate) fn is_null(&self) -> bool
