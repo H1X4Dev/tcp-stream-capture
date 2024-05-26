@@ -16,4 +16,5 @@ cmake = "0.1.50"
 cxx-build = "1.0.122"
 
 [dev-dependencies]
+anyhow = "1.0.86"
 tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
