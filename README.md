@@ -1,4 +1,4 @@
-# tcp_stream_capture
+# tcp-stream-capture
 
 Capture TCP packets from libpcap and reassemble them into TCP streams.
 
