@@ -48,9 +48,9 @@ public:
     ~TcpStreamCapture();
 
     CaptureResult set_filter(rust::Str filter);
-    bool clear_filter();
+    CaptureResult clear_filter();
 
-    bool start_capturing();
+    CaptureResult start_capturing();
     void stop_capturing();
 
     friend std::unique_ptr<TcpStreamCapture> capture_from_live(LiveDevice const& device, rust::Box<Context> ctx);

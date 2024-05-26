@@ -50,11 +50,13 @@ pub(crate) mod ffi {
         tv_usec: i64,
     }
 
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
     pub(crate) enum CaptureResult {
         Ok = 0,
         InvalidFilter,
         FilterUpdateFailed,
         DeviceOpenFailed,
+        CaptureStartFailed,
     }
 
     extern "Rust" {
@@ -112,9 +114,9 @@ pub(crate) mod ffi {
         fn capture_from_file(filename: &[u8], ctx: Box<Context>) -> UniquePtr<TcpStreamCapture>;
 
         fn set_filter(self: Pin<&mut TcpStreamCapture>, filter: &str) -> CaptureResult;
-        fn clear_filter(self: Pin<&mut TcpStreamCapture>) -> bool;
+        fn clear_filter(self: Pin<&mut TcpStreamCapture>) -> CaptureResult;
 
-        fn start_capturing(self: Pin<&mut TcpStreamCapture>) -> bool;
+        fn start_capturing(self: Pin<&mut TcpStreamCapture>) -> CaptureResult;
         fn stop_capturing(self: Pin<&mut TcpStreamCapture>);
     }
 }

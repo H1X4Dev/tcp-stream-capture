@@ -333,9 +333,9 @@ public:
     ~Impl();
 
     CaptureResult set_filter(rust::Str filter);
-    bool clear_filter();
+    CaptureResult clear_filter();
 
-    bool start_capturing();
+    CaptureResult start_capturing();
     void stop_capturing();
 };
 
@@ -376,7 +376,7 @@ CaptureResult TcpStreamCapture::Impl::set_filter(rust::Str filter)
     return CaptureResult::Ok;
 }
 
-bool TcpStreamCapture::Impl::clear_filter()
+CaptureResult TcpStreamCapture::Impl::clear_filter()
 {
     LOG_TRACE("TcpStreamCapture::clear_filter");
     // If the device is opened, try to update the filter immediately.
@@ -384,30 +384,32 @@ bool TcpStreamCapture::Impl::clear_filter()
     // If clearing fails, we keep m_filter alive.
     if (m_device->isOpened() && !m_device->clearFilter()) {
         LOG_ERROR("TcpStreamCapture::clear_filter: unable to clear device filter");
-        return false;
+        return CaptureResult::FilterUpdateFailed;
     }
     m_filter = nullptr;
-    return true;
+    return CaptureResult::Ok;
 }
 
-bool TcpStreamCapture::Impl::start_capturing()
+CaptureResult TcpStreamCapture::Impl::start_capturing()
 {
     LOG_TRACE("TcpStreamCapture::start_capturing");
-    if (m_is_capturing)
-        return false;
+    if (m_is_capturing) {
+        LOG_WARN("TcpStreamCapture::start_capturing: already started");
+        return CaptureResult::Ok;
+    }
     if (!m_device->open()) {
         LOG_ERROR("TcpStreamCapture::start_capturing: unable to open device");
-        return false;
+        return CaptureResult::DeviceOpenFailed;
     }
     if (m_filter && !m_device->setFilter(*m_filter)) {
         LOG_ERROR("TcpStreamCapture::start_capturing: unable to set device filter");
         m_device->close();
-        return false;
+        return CaptureResult::FilterUpdateFailed;
     }
     else if (!m_filter && !m_device->clearFilter()) {
         LOG_ERROR("TcpStreamCapture::start_capturing: unable to clear device filter");
         m_device->close();
-        return false;
+        return CaptureResult::FilterUpdateFailed;
     }
     if (auto live_device = dynamic_cast<pcpp::PcapLiveDevice*>(m_device)) {
         // This starts a background thread where the capturing is done.
@@ -423,7 +425,7 @@ bool TcpStreamCapture::Impl::start_capturing()
         m_is_capturing = true;
         m_file_reader_thread = std::thread(Impl::read_file_device, this, file_device);
     }
-    return m_is_capturing;
+    return m_is_capturing ? CaptureResult::Ok : CaptureResult::CaptureStartFailed;
 }
 
 void TcpStreamCapture::Impl::stop_capturing()
@@ -528,12 +530,12 @@ CaptureResult TcpStreamCapture::set_filter(rust::Str filter)
     return m_impl->set_filter(std::move(filter));
 }
 
-bool TcpStreamCapture::clear_filter()
+CaptureResult TcpStreamCapture::clear_filter()
 {
     return m_impl->clear_filter();
 }
 
-bool TcpStreamCapture::start_capturing()
+CaptureResult TcpStreamCapture::start_capturing()
 {
     return m_impl->start_capturing();
 }
