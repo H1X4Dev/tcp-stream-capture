@@ -218,7 +218,7 @@ pub enum TcpStreamEvent<'a> {
     ConnectionEnd(TcpConnection<'a>),
 }
 
-pub type OnTcpEvent = fn(event: TcpStreamEvent<'_>, user_cookie: &(dyn Any + Send));
+pub type OnTcpEvent = fn(event: TcpStreamEvent<'_>, user_cookie: &Box<dyn Any + Send>);
 
 pub struct Context {
     on_tcp_event: OnTcpEvent,

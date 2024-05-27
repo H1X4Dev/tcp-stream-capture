@@ -1,6 +1,6 @@
 [package]
 name = "tcp-stream-capture"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 license = "Unlicense"
 authors = ["Izumi Raine <63145238+IzumiRaine@users.noreply.github.com>"]

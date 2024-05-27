@@ -28,7 +28,8 @@ fn main() -> Result<()>
     let device = &devices[0];
     println!("Capturing from device: {}", device.name()?);
 
-    let ctx = Context::new(on_tcp_event, Box::new(()));
+    let cookie = Box::new(MyCookie { value: 123 });
+    let ctx = Context::new(on_tcp_event, cookie);
     let mut cap = TcpStreamCapture::from_live(device, ctx);
 
     cap.start_capturing()?;
@@ -40,8 +41,17 @@ fn main() -> Result<()>
     Ok(())
 }
 
-fn on_tcp_event(event: TcpStreamEvent, _user_cookie: &(dyn Any + Send))
+#[derive(Debug)]
+struct MyCookie {
+    value: i32,
+}
+
+fn on_tcp_event(event: TcpStreamEvent, _user_cookie: &Box<dyn Any + Send>)
 {
+    let cookie = _user_cookie.downcast_ref::<MyCookie>()
+        .expect("downcasting user_cookie");
+    println!("Cookie value: {}", cookie.value);
+
     match event {
         TcpStreamEvent::Message { conn, side, payload, missing_bytes, timestamp } => {
             let side = if side == TcpStreamSide::SideA { "A" } else { "B" };
