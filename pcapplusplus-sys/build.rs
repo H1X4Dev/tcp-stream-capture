@@ -6,6 +6,7 @@ fn main()
         .define("PCAPPP_BUILD_TESTS", "OFF")
         .define("PCAPPP_BUILD_COVERAGE", "OFF")
         .define("PCAPPP_BUILD_FUZZERS", "OFF")
+        .cxxflag("/EHsc")
         .build();
     let pcpp_include = pcpp.join("include");
     let pcpp_lib = pcpp.join("lib64");
